@@ -9,34 +9,49 @@ const tintColorLight = '#0a7ea4';
 const tintColorDark = '#fff';
 
 export const Colors = {
-  light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
-  },
-  dark: {
-    text: '#ECEDEE',
-    background: '#151718',
-    tint: tintColorDark,
-    icon: '#9BA1A6',
-    tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
-  },
+  // Primary Colors
+  headerBg: '#054003',
+  primary: '#148C0F',
+  secondary: '#BF0F1E',
+  accent: '#2ABF24',
+  
+  // Text Colors
+  textHeading: '#590202',
+  textLight: '#ffffff',
+  textMuted: '#6b6b6b',
+  
+  // Background Colors
+  bgLight: '#F5F5F5',
+  bgDark: '#054003',
+  bgWhite: '#ffffff',
+  
+  // Priority Colors
+  priorityCritical: '#BF0F1E',
+  priorityHigh: '#FF6B35',
+  priorityMedium: '#FFA500',
+  priorityLow: '#2ABF24',
+  
+  // UI Colors
+  border: 'rgba(0, 0, 0, 0.1)',
+  cardBg: '#ffffff',
+  inputBg: '#ffffff',
+  
+  // Status Colors
+  success: '#2ABF24',
+  warning: '#FFA500',
+  error: '#BF0F1E',
+  info: '#148C0F',
 };
-
-export const Fonts = Platform.select({
+/*export const Fonts = Platform.select({
   ios: {
     /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
+    /*sans: 'system-ui',
     /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
+   /* serif: 'ui-serif',
     /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
+   /* rounded: 'ui-rounded',
     /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
+   /* mono: 'ui-monospace',
   },
   default: {
     sans: 'normal',
@@ -49,5 +64,4 @@ export const Fonts = Platform.select({
     serif: "Georgia, 'Times New Roman', serif",
     rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
     mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-  },
-});
+  /*}, */
