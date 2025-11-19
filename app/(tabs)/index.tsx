@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -8,16 +8,43 @@ import {
   Modal,
   StyleSheet,
   Alert,
+  Animated,
+  Dimensions,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '@/constants/Colors';
 import IncidentCard from '@/components/IncidentCard';
 import { mockIncidents } from '@/data/mockData';
 
+const { width } = Dimensions.get('window');
+
+const emergencyContacts = [
+  { service: 'Police', number: '999 / 112', notes: 'General police emergencies', icon: 'shield-account' },
+  { service: 'Fire & Rescue', number: '999 / 112', notes: 'Fire emergencies and rescue', icon: 'fire-truck' },
+  { service: 'Ambulance / Medical', number: '999 / 112', notes: 'Emergency medical response', icon: 'ambulance' },
+  { service: 'Anti-Terrorism', number: '719', notes: 'Counter-terrorism reporting', icon: 'shield-alert' },
+  { service: 'Traffic Police', number: '020 272 4066', notes: 'Road safety and accident response', icon: 'car-emergency' },
+  { service: 'Women & Children', number: '1195', notes: 'Gender-based violence & child protection', icon: 'account-group' },
+  { service: 'Domestic Violence', number: '1190', notes: 'Support for domestic abuse victims', icon: 'hand-heart' },
+]
+
+const incidentTypes = ['Theft', 'Assault', 'Burglary', 'Traffic Accident', 'Fraud'];
+
 export default function HomeScreen() {
   const [description, setDescription] = useState('');
   const [selectedType, setSelectedType] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [currentContactIndex, setCurrentContactIndex] = useState(0);
+  const scrollX = useRef(new Animated.Value(0)).current;
+
+  const greeting = 'Good afternoon';
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentContactIndex((prev) => (prev + 1) % emergencyContacts.length);
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSubmit = () => {
     if (!description || !selectedType) {
@@ -47,6 +74,15 @@ export default function HomeScreen() {
           <Text style={styles.headerTitle}>SafeReport</Text>
           <Text style={styles.headerSubtitle}>Help keep your community safe</Text>
         </View>
+        <View style={styles.topBar}>
+          <View>
+            <Text style={styles.greetingText}>{greeting},</Text>
+          </View>
+          <TouchableOpacity style={styles.notificationButton}>
+              <MaterialCommunityIcons name="bell-outline" size={24} color={Colors.textHeading} />
+              <View style={styles.notificationBadge} />
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.content}>
           {/* Alert Banner */}
@@ -58,10 +94,57 @@ export default function HomeScreen() {
               style={{ marginRight: 12 }}
             />
             <View style={{ flex: 1 }}>
-              <Text style={styles.alertTitle}>Emergency? Call 911</Text>
+              <Text style={styles.alertTitle}>Emergency? Call 999</Text>
               <Text style={styles.alertSubtitle}>
                 Use this app for non-emergency reporting
               </Text>
+            </View>
+          </View>
+
+          <View style={styles.carouselContainer}>
+            <Text style={styles.carouselTitle}>Emergency Contact Lines In Kenya</Text>
+            <View style={styles.carousel}>
+              {emergencyContacts.map((contact, index) => (
+                <Animated.View
+                  key={index}
+                  style={[
+                    styles.contactCard,
+                    {
+                      display: index === currentContactIndex ? 'flex' : 'none',
+                    },
+                  ]}
+                >
+                  <View style={styles.contactHeader}>
+                    <MaterialCommunityIcons
+                      name={contact.icon as any}
+                      size={32}
+                      color={Colors.primary}
+                    />
+                    <View style={styles.contactInfo}>
+                      <Text style={styles.contactService}>{contact.service}</Text>
+                      <Text style={styles.contactNumber}>{contact.number}</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.contactNotes}>{contact.notes}</Text>
+                  <TouchableOpacity style={styles.callButton}>
+                    <MaterialCommunityIcons name="phone" size={18} color={Colors.textLight} />
+                    <Text style={styles.callButtonText}>Call Now</Text>
+                  </TouchableOpacity>
+                </Animated.View>
+              ))}
+            </View>
+
+            {/* Carousel Indicators */}
+            <View style={styles.indicatorContainer}>
+              {emergencyContacts.map((_, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.indicator,
+                    index === currentContactIndex && styles.activeIndicator,
+                  ]}
+                />
+              ))}
             </View>
           </View>
 
@@ -75,34 +158,8 @@ export default function HomeScreen() {
             <Text style={styles.reportButtonText}>Report an Incident</Text>
           </TouchableOpacity>
 
-          {/* Stats */}
-          <View style={styles.statsContainer}>
-            <View style={styles.statCard}>
-              <Text style={[styles.statValue, { color: Colors.primary }]}>142</Text>
-              <Text style={styles.statLabel}>Reports Today</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={[styles.statValue, { color: Colors.accent }]}>89</Text>
-              <Text style={styles.statLabel}>Resolved</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={[styles.statValue, { color: Colors.secondary }]}>53</Text>
-              <Text style={styles.statLabel}>Pending</Text>
-            </View>
-          </View>
+         
 
-          {/* Recent Reports */}
-          <View>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Recent in Your Area</Text>
-              <TouchableOpacity>
-                <Text style={{ color: Colors.accent, fontSize: 14 }}>View All</Text>
-              </TouchableOpacity>
-            </View>
-            {recentIncidents.map((incident) => (
-              <IncidentCard key={incident.id} incident={incident} />
-            ))}
-          </View>
         </View>
       </ScrollView>
 
@@ -133,6 +190,19 @@ export default function HomeScreen() {
                 numberOfLines={4}
               />
 
+              <Text style={styles.label}>Incident Type</Text>
+              <View style={styles.typeContainer}>
+                {incidentTypes.map((type) => (
+                  <TouchableOpacity
+                    key={type}
+                    style={[styles.typeButton, selectedType === type && styles.selectedTypeButton]}
+                    onPress={() => setSelectedType(type)}
+                  >
+                    <Text style={[styles.typeButtonText, selectedType === type && styles.selectedTypeButtonText]}>{type}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
               <TouchableOpacity
                 style={[styles.submitButton, (!description || !selectedType) && { opacity: 0.5 }]}
                 onPress={handleSubmit}
@@ -152,6 +222,32 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.bgLight,
+  },
+  topBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 12,
+    backgroundColor: Colors.bgLight,
+  },
+  greetingText: {
+    fontSize: 14,
+    color: Colors.textMuted,
+  },
+  notificationButton: {
+    position: 'relative',
+    padding: 8,
+  },
+   notificationBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.secondary,
   },
   header: {
     backgroundColor: Colors.headerBg,
@@ -293,5 +389,97 @@ const styles = StyleSheet.create({
     color: Colors.textLight,
     fontSize: 16,
     fontWeight: '600',
+  },
+  typeContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+  },
+  typeButton: {
+    backgroundColor: Colors.inputBg,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: 8,
+  },
+  selectedTypeButton: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  typeButtonText: {
+    fontSize: 14,
+    color: Colors.textHeading,
+  },
+  selectedTypeButtonText: {
+    color: Colors.textLight,
+  },
+  carouselContainer: {
+    marginBottom: 40,
+  },
+  carouselTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.textHeading,
+    marginBottom: 12,
+  },
+  carousel: {
+    height: 120,
+  },
+  contactCard: {
+    backgroundColor: Colors.cardBg,
+    borderRadius: 8,
+    padding: 12,
+  },
+  contactHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  contactInfo: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  contactService: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.textHeading,
+  },
+  contactNumber: {
+    fontSize: 14,
+    color: Colors.primary,
+  },
+  contactNotes: {
+    fontSize: 14,
+    color: Colors.textMuted,
+    marginBottom: 8,
+  },
+  callButton: {
+    backgroundColor: Colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 8,
+    borderRadius: 6,
+  },
+  callButtonText: {
+    color: Colors.textLight,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  indicatorContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 12,
+  },
+  indicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: Colors.textMuted,
+    marginHorizontal: 4,
+  },
+  activeIndicator: {
+    backgroundColor: Colors.primary,
   },
 });

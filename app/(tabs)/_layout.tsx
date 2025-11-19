@@ -33,12 +33,13 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Home',
-          headerTitle: 'SafeReport',
+          headerTitle: 'Kenya Sentinel',
           tabBarIcon: ({ color }) => (
             <MaterialCommunityIcons name="home" size={24} color={color} />
           ),
         }}
       />
+      
       <Tabs.Screen
         name="map"
         options={{
@@ -55,6 +56,15 @@ export default function TabLayout() {
           title: 'Explore',
           tabBarIcon: ({ color }) => (
             <MaterialCommunityIcons name="compass" size={24} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="safety"
+        options={{
+          title: 'Safety',
+          tabBarIcon: ({ color }) => (
+            <MaterialCommunityIcons name="shield" size={24} color={color} />
           ),
         }}
       />
