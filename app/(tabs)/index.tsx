@@ -10,6 +10,7 @@ import {
   Alert,
   Animated,
   Dimensions,
+  Linking,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '@/constants/Colors';
@@ -17,6 +18,15 @@ import IncidentCard from '@/components/IncidentCard';
 import { mockIncidents } from '@/data/mockData';
 
 const { width } = Dimensions.get('window');
+
+const getGreeting = () => {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return 'Good morning';
+  if (hour >= 12 && hour < 14) return 'Good noon';
+  if (hour >= 14 && hour < 18) return 'Good afternoon';
+  if (hour >= 18 && hour < 22) return 'Good evening';
+  return 'Good night';
+};
 
 const emergencyContacts = [
   { service: 'Police', number: '999 / 112', notes: 'General police emergencies', icon: 'shield-account' },
@@ -35,13 +45,18 @@ export default function HomeScreen() {
   const [selectedType, setSelectedType] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentContactIndex, setCurrentContactIndex] = useState(0);
+  const scrollRef = useRef<ScrollView>(null);
   const scrollX = useRef(new Animated.Value(0)).current;
 
-  const greeting = 'Good afternoon';
+  const greeting = getGreeting();
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentContactIndex((prev) => (prev + 1) % emergencyContacts.length);
+      setCurrentContactIndex((prev) => {
+        const next = (prev + 1) % emergencyContacts.length;
+        scrollRef.current?.scrollTo({ x: next * width, animated: true });
+        return next;
+      });
     }, 4000);
     return () => clearInterval(interval);
   }, []);
@@ -65,6 +80,12 @@ export default function HomeScreen() {
   };
 
   const recentIncidents = mockIncidents.slice(0, 3);
+
+  const handleScrollEnd = (event: any) => {
+    const contentOffset = event.nativeEvent.contentOffset.x;
+    const index = Math.round(contentOffset / width);
+    setCurrentContactIndex(index);
+  };
 
   return (
     <View style={styles.container}>
@@ -103,17 +124,16 @@ export default function HomeScreen() {
 
           <View style={styles.carouselContainer}>
             <Text style={styles.carouselTitle}>Emergency Contact Lines In Kenya</Text>
-            <View style={styles.carousel}>
+            <ScrollView
+              ref={scrollRef}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onMomentumScrollEnd={handleScrollEnd}
+              style={styles.carousel}
+            >
               {emergencyContacts.map((contact, index) => (
-                <Animated.View
-                  key={index}
-                  style={[
-                    styles.contactCard,
-                    {
-                      display: index === currentContactIndex ? 'flex' : 'none',
-                    },
-                  ]}
-                >
+                <View key={index} style={styles.contactCard}>
                   <View style={styles.contactHeader}>
                     <MaterialCommunityIcons
                       name={contact.icon as any}
@@ -126,13 +146,13 @@ export default function HomeScreen() {
                     </View>
                   </View>
                   <Text style={styles.contactNotes}>{contact.notes}</Text>
-                  <TouchableOpacity style={styles.callButton}>
+                  <TouchableOpacity style={styles.callButton} onPress={() => Linking.openURL(`tel:${contact.number.split(' / ')[0]}`)}>
                     <MaterialCommunityIcons name="phone" size={18} color={Colors.textLight} />
                     <Text style={styles.callButtonText}>Call Now</Text>
                   </TouchableOpacity>
-                </Animated.View>
+                </View>
               ))}
-            </View>
+            </ScrollView>
 
             {/* Carousel Indicators */}
             <View style={styles.indicatorContainer}>
@@ -148,20 +168,20 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          {/* Report Button */}
-          <TouchableOpacity
-            style={styles.reportButton}
-            onPress={() => setIsDialogOpen(true)}
-            activeOpacity={0.8}
-          >
-            <MaterialCommunityIcons name="plus" size={20} color={Colors.textLight} />
-            <Text style={styles.reportButtonText}>Report an Incident</Text>
-          </TouchableOpacity>
-
-         
-
         </View>
       </ScrollView>
+
+      {/* Report Button */}
+      <View style={styles.reportButtonContainer}>
+        <TouchableOpacity
+          style={styles.reportButton}
+          onPress={() => setIsDialogOpen(true)}
+          activeOpacity={0.8}
+        >
+          <MaterialCommunityIcons name="plus" size={20} color={Colors.textLight} />
+          <Text style={styles.reportButtonText}>Report an Incident</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Modal for Report Form */}
       <Modal
@@ -287,6 +307,13 @@ const styles = StyleSheet.create({
     color: Colors.textHeading,
     opacity: 0.7,
   },
+  reportButtonContainer: {
+    position: 'absolute',
+    bottom: 125,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+  },
   reportButton: {
     backgroundColor: Colors.primary,
     flexDirection: 'row',
@@ -294,7 +321,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 16,
     borderRadius: 8,
-    marginBottom: 20,
     gap: 8,
   },
   reportButtonText: {
@@ -421,20 +447,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: Colors.textHeading,
-    marginBottom: 12,
+    marginBottom: 24,
   },
   carousel: {
-    height: 120,
+    height: 150,
   },
   contactCard: {
     backgroundColor: Colors.cardBg,
     borderRadius: 8,
     padding: 12,
+    width: width,
   },
   contactHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 14,
   },
   contactInfo: {
     marginLeft: 12,
