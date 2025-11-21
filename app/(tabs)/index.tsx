@@ -8,14 +8,13 @@ import {
   Modal,
   StyleSheet,
   Alert,
-  Animated,
   Dimensions,
   Linking,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import { Camera } from 'expo-camera';
 import { Colors } from '@/constants/Colors';
-import IncidentCard from '@/components/IncidentCard';
-import { mockIncidents } from '@/data/mockData';
 
 const { width } = Dimensions.get('window');
 
@@ -45,8 +44,8 @@ export default function HomeScreen() {
   const [selectedType, setSelectedType] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentContactIndex, setCurrentContactIndex] = useState(0);
+  const [attachedVideos, setAttachedVideos] = useState<string[]>([]);
   const scrollRef = useRef<ScrollView>(null);
-  const scrollX = useRef(new Animated.Value(0)).current;
 
   const greeting = getGreeting();
 
@@ -73,13 +72,60 @@ export default function HomeScreen() {
         onPress: () => {
           setDescription('');
           setSelectedType('');
+          setAttachedVideos([]);
           setIsDialogOpen(false);
         },
       },
     ]);
   };
 
-  const recentIncidents = mockIncidents.slice(0, 3);
+  const pickVideoFromGallery = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Please grant permission to access your media library');
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+      allowsEditing: true,
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      setAttachedVideos(prev => [...prev, result.assets[0].uri]);
+    }
+  };
+
+  const recordVideoFromCamera = async () => {
+    const { status } = await Camera.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Please grant permission to access your camera');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Videos,
+      allowsEditing: true,
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      setAttachedVideos(prev => [...prev, result.assets[0].uri]);
+    }
+  };
+
+  const showMediaOptions = () => {
+    Alert.alert(
+      'Attach Video',
+      'Choose an option',
+      [
+        { text: 'Record Video', onPress: recordVideoFromCamera },
+        { text: 'Choose from Gallery', onPress: pickVideoFromGallery },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
 
   const handleScrollEnd = (event: any) => {
     const contentOffset = event.nativeEvent.contentOffset.x;
@@ -201,14 +247,41 @@ export default function HomeScreen() {
 
             <ScrollView>
               <Text style={styles.label}>Description</Text>
-              <TextInput
-                style={styles.textArea}
-                placeholder="Describe what happened..."
-                value={description}
-                onChangeText={setDescription}
-                multiline
-                numberOfLines={4}
-              />
+              <View style={styles.descriptionContainer}>
+                <TextInput
+                  style={styles.textArea}
+                  placeholder="Describe what happened..."
+                  value={description}
+                  onChangeText={setDescription}
+                  multiline
+                  numberOfLines={4}
+                />
+                <TouchableOpacity
+                  style={styles.attachButton}
+                  onPress={showMediaOptions}
+                >
+                  <MaterialCommunityIcons name="plus" size={24} color={Colors.primary} />
+                </TouchableOpacity>
+              </View>
+
+              {attachedVideos.length > 0 && (
+                <View style={styles.attachedVideosContainer}>
+                  <Text style={styles.label}>Attached Videos</Text>
+                  <View style={styles.videosList}>
+                    {attachedVideos.map((videoUri, index) => (
+                      <View key={index} style={styles.videoItem}>
+                        <MaterialCommunityIcons name="video" size={20} color={Colors.primary} />
+                        <Text style={styles.videoText}>Video {index + 1}</Text>
+                        <TouchableOpacity
+                          onPress={() => setAttachedVideos(prev => prev.filter((_, i) => i !== index))}
+                        >
+                          <MaterialCommunityIcons name="close" size={20} color={Colors.secondary} />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
 
               <Text style={styles.label}>Incident Type</Text>
               <View style={styles.typeContainer}>
@@ -395,15 +468,32 @@ const styles = StyleSheet.create({
     color: Colors.textHeading,
     marginBottom: 8,
   },
+  descriptionContainer: {
+    position: 'relative',
+    marginBottom: 16,
+  },
   textArea: {
     backgroundColor: Colors.inputBg,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: Colors.border,
     padding: 12,
+    paddingRight: 50, // Make room for the button
     minHeight: 100,
     fontSize: 16,
-    marginBottom: 16,
+  },
+  attachButton: {
+    position: 'absolute',
+    right: 12,
+    top: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.bgWhite,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   submitButton: {
     backgroundColor: Colors.primary,
@@ -508,5 +598,26 @@ const styles = StyleSheet.create({
   },
   activeIndicator: {
     backgroundColor: Colors.primary,
+  },
+  attachedVideosContainer: {
+    marginBottom: 16,
+  },
+  videosList: {
+    gap: 8,
+  },
+  videoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.inputBg,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: 12,
+  },
+  videoText: {
+    flex: 1,
+    fontSize: 14,
+    color: Colors.textHeading,
+    marginLeft: 8,
   },
 });

@@ -8,7 +8,6 @@ export default function RootLayout() {
       <StatusBar style="light" backgroundColor="#054003" />
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
       </Stack>
     </>
   );

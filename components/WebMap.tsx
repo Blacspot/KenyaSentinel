@@ -1,7 +1,6 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { StyleSheet } from "react-native";
 import { WebView } from "react-native-webview";
-import * as Location from "expo-location";
 
 export default function WebMap() {
   const leafletHTML = `
