@@ -5,7 +5,6 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Modal,
   StyleSheet,
   Alert,
   Dimensions,
@@ -13,8 +12,9 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { Camera } from 'expo-camera';
+import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/Colors';
+import { useLocalSearchParams } from 'expo-router';
 
 const { width } = Dimensions.get('window');
 
@@ -35,17 +35,19 @@ const emergencyContacts = [
   { service: 'Traffic Police', number: '020 272 4066', notes: 'Road safety and accident response', icon: 'car-emergency' },
   { service: 'Women & Children', number: '1195', notes: 'Gender-based violence & child protection', icon: 'account-group' },
   { service: 'Domestic Violence', number: '1190', notes: 'Support for domestic abuse victims', icon: 'hand-heart' },
-]
+];
 
 const incidentTypes = ['Theft', 'Assault', 'Burglary', 'Traffic Accident', 'Fraud'];
 
 export default function HomeScreen() {
   const [description, setDescription] = useState('');
   const [selectedType, setSelectedType] = useState('');
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentContactIndex, setCurrentContactIndex] = useState(0);
   const [attachedVideos, setAttachedVideos] = useState<string[]>([]);
+  const [showPopover, setShowPopover] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+  const router = useRouter();
+  const params = useLocalSearchParams();
 
   const greeting = getGreeting();
 
@@ -60,6 +62,12 @@ export default function HomeScreen() {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    if (params?.videoUri) {
+      setAttachedVideos(prev => [...prev, params.videoUri as string]);
+    }
+  }, [params]);
+
   const handleSubmit = () => {
     if (!description || !selectedType) {
       Alert.alert('Error', 'Please fill in all required fields');
@@ -73,7 +81,6 @@ export default function HomeScreen() {
           setDescription('');
           setSelectedType('');
           setAttachedVideos([]);
-          setIsDialogOpen(false);
         },
       },
     ]);
@@ -94,37 +101,16 @@ export default function HomeScreen() {
 
     if (!result.canceled) {
       setAttachedVideos(prev => [...prev, result.assets[0].uri]);
+      setShowPopover(false);
     }
   };
 
   const recordVideoFromCamera = async () => {
-    const { status } = await Camera.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please grant permission to access your camera');
-      return;
-    }
-
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Videos,
-      allowsEditing: true,
-      quality: 1,
+    router.push({
+      pathname: "/camera" as any,
+      params: { returnTo: "/" },
     });
-
-    if (!result.canceled) {
-      setAttachedVideos(prev => [...prev, result.assets[0].uri]);
-    }
-  };
-
-  const showMediaOptions = () => {
-    Alert.alert(
-      'Attach Video',
-      'Choose an option',
-      [
-        { text: 'Record Video', onPress: recordVideoFromCamera },
-        { text: 'Choose from Gallery', onPress: pickVideoFromGallery },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
+    setShowPopover(false);
   };
 
   const handleScrollEnd = (event: any) => {
@@ -141,13 +127,12 @@ export default function HomeScreen() {
           <Text style={styles.headerTitle}>SafeReport</Text>
           <Text style={styles.headerSubtitle}>Help keep your community safe</Text>
         </View>
+
         <View style={styles.topBar}>
-          <View>
-            <Text style={styles.greetingText}>{greeting},</Text>
-          </View>
+          <Text style={styles.greetingText}>{greeting},</Text>
           <TouchableOpacity style={styles.notificationButton}>
-              <MaterialCommunityIcons name="bell-outline" size={24} color={Colors.textHeading} />
-              <View style={styles.notificationBadge} />
+            <MaterialCommunityIcons name="bell-outline" size={24} color={Colors.textHeading} />
+            <View style={styles.notificationBadge} />
           </TouchableOpacity>
         </View>
 
@@ -162,12 +147,11 @@ export default function HomeScreen() {
             />
             <View style={{ flex: 1 }}>
               <Text style={styles.alertTitle}>Emergency? Call 999</Text>
-              <Text style={styles.alertSubtitle}>
-                Use this app for non-emergency reporting
-              </Text>
+              <Text style={styles.alertSubtitle}>Use this app for non-emergency reporting</Text>
             </View>
           </View>
 
+          {/* Emergency Contacts Carousel */}
           <View style={styles.carouselContainer}>
             <Text style={styles.carouselTitle}>Emergency Contact Lines In Kenya</Text>
             <ScrollView
@@ -213,411 +197,89 @@ export default function HomeScreen() {
               ))}
             </View>
           </View>
-
         </View>
       </ScrollView>
+
+      {/* Popover above + button */}
+      {showPopover && (
+        <View style={styles.popoverContainer}>
+          <TouchableOpacity style={styles.popoverItem} onPress={recordVideoFromCamera}>
+            <MaterialCommunityIcons name="video" size={20} color={Colors.textHeading} />
+            <Text style={styles.popoverText}>Record Video</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.popoverItem} onPress={pickVideoFromGallery}>
+            <MaterialCommunityIcons name="folder" size={20} color={Colors.textHeading} />
+            <Text style={styles.popoverText}>Choose From Gallery</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.popoverItem} onPress={() => setShowPopover(false)}>
+            <MaterialCommunityIcons name="close" size={20} color={Colors.secondary} />
+            <Text style={styles.popoverText}>Close</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Report Button */}
       <View style={styles.reportButtonContainer}>
         <TouchableOpacity
           style={styles.reportButton}
-          onPress={() => setIsDialogOpen(true)}
+          onPress={() => setShowPopover(prev => !prev)}
           activeOpacity={0.8}
         >
           <MaterialCommunityIcons name="plus" size={20} color={Colors.textLight} />
           <Text style={styles.reportButtonText}>Report an Incident</Text>
         </TouchableOpacity>
       </View>
-
-      {/* Modal for Report Form */}
-      <Modal
-        visible={isDialogOpen}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setIsDialogOpen(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Report an Incident</Text>
-              <TouchableOpacity onPress={() => setIsDialogOpen(false)}>
-                <MaterialCommunityIcons name="close" size={24} color={Colors.textHeading} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView>
-              <Text style={styles.label}>Description</Text>
-              <View style={styles.descriptionContainer}>
-                <TextInput
-                  style={styles.textArea}
-                  placeholder="Describe what happened..."
-                  value={description}
-                  onChangeText={setDescription}
-                  multiline
-                  numberOfLines={4}
-                />
-                <TouchableOpacity
-                  style={styles.attachButton}
-                  onPress={showMediaOptions}
-                >
-                  <MaterialCommunityIcons name="plus" size={24} color={Colors.primary} />
-                </TouchableOpacity>
-              </View>
-
-              {attachedVideos.length > 0 && (
-                <View style={styles.attachedVideosContainer}>
-                  <Text style={styles.label}>Attached Videos</Text>
-                  <View style={styles.videosList}>
-                    {attachedVideos.map((videoUri, index) => (
-                      <View key={index} style={styles.videoItem}>
-                        <MaterialCommunityIcons name="video" size={20} color={Colors.primary} />
-                        <Text style={styles.videoText}>Video {index + 1}</Text>
-                        <TouchableOpacity
-                          onPress={() => setAttachedVideos(prev => prev.filter((_, i) => i !== index))}
-                        >
-                          <MaterialCommunityIcons name="close" size={20} color={Colors.secondary} />
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              )}
-
-              <Text style={styles.label}>Incident Type</Text>
-              <View style={styles.typeContainer}>
-                {incidentTypes.map((type) => (
-                  <TouchableOpacity
-                    key={type}
-                    style={[styles.typeButton, selectedType === type && styles.selectedTypeButton]}
-                    onPress={() => setSelectedType(type)}
-                  >
-                    <Text style={[styles.typeButtonText, selectedType === type && styles.selectedTypeButtonText]}>{type}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              <TouchableOpacity
-                style={[styles.submitButton, (!description || !selectedType) && { opacity: 0.5 }]}
-                onPress={handleSubmit}
-                disabled={!description || !selectedType}
-              >
-                <Text style={styles.submitButtonText}>Submit Report</Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.bgLight,
-  },
-  topBar: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 12,
-    backgroundColor: Colors.bgLight,
-  },
-  greetingText: {
-    fontSize: 14,
-    color: Colors.textMuted,
-  },
-  notificationButton: {
-    position: 'relative',
-    padding: 8,
-  },
-   notificationBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.secondary,
-  },
-  header: {
-    backgroundColor: Colors.headerBg,
-    padding: 16,
-    paddingBottom: 24,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: Colors.textLight,
-    marginBottom: 4,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: Colors.textLight,
-    opacity: 0.9,
-  },
-  content: {
-    padding: 16,
-  },
-  alertBanner: {
-    backgroundColor: `${Colors.secondary}15`,
-    borderWidth: 1,
-    borderColor: `${Colors.secondary}50`,
-    borderRadius: 8,
-    padding: 12,
-    flexDirection: 'row',
-    marginBottom: 20,
-  },
-  alertTitle: {
-    fontSize: 16,
-    color: Colors.textHeading,
-    marginBottom: 4,
-  },
-  alertSubtitle: {
-    fontSize: 14,
-    color: Colors.textHeading,
-    opacity: 0.7,
-  },
-  reportButtonContainer: {
-    position: 'absolute',
-    bottom: 125,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
-  reportButton: {
-    backgroundColor: Colors.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    borderRadius: 8,
-    gap: 8,
-  },
-  reportButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.textLight,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 20,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: Colors.cardBg,
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: Colors.textMuted,
-    textAlign: 'center',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: Colors.textHeading,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
+  container: { flex: 1, backgroundColor: Colors.bgLight },
+  topBar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12, backgroundColor: Colors.bgLight },
+  greetingText: { fontSize: 14, color: Colors.textMuted },
+  notificationButton: { position: 'relative', padding: 8 },
+  notificationBadge: { position: 'absolute', top: 8, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.secondary },
+  header: { backgroundColor: Colors.headerBg, padding: 16, paddingBottom: 24 },
+  headerTitle: { fontSize: 24, fontWeight: '600', color: Colors.textLight, marginBottom: 4 },
+  headerSubtitle: { fontSize: 14, color: Colors.textLight, opacity: 0.9 },
+  content: { padding: 16 },
+  alertBanner: { backgroundColor: `${Colors.secondary}15`, borderWidth: 1, borderColor: `${Colors.secondary}50`, borderRadius: 8, padding: 12, flexDirection: 'row', marginBottom: 20 },
+  alertTitle: { fontSize: 16, color: Colors.textHeading, marginBottom: 4 },
+  alertSubtitle: { fontSize: 14, color: Colors.textHeading, opacity: 0.7 },
+  reportButtonContainer: { position: 'absolute', bottom: 125, left: 0, right: 0, alignItems: 'center' },
+  reportButton: { backgroundColor: Colors.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 16, borderRadius: 8, gap: 8 },
+  reportButtonText: { fontSize: 16, fontWeight: '600', color: Colors.textLight },
+  carouselContainer: { marginBottom: 40 },
+  carouselTitle: { fontSize: 16, fontWeight: '600', color: Colors.textHeading, marginBottom: 24 },
+  carousel: { height: 150 },
+  contactCard: { backgroundColor: Colors.cardBg, borderRadius: 8, padding: 12, width: width },
+  contactHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 14 },
+  contactInfo: { marginLeft: 12, flex: 1 },
+  contactService: { fontSize: 16, fontWeight: '600', color: Colors.textHeading },
+  contactNumber: { fontSize: 14, color: Colors.primary },
+  contactNotes: { fontSize: 14, color: Colors.textMuted, marginBottom: 8 },
+  callButton: { backgroundColor: Colors.primary, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 8, borderRadius: 6 },
+  callButtonText: { color: Colors.textLight, fontSize: 14, fontWeight: '600' },
+  indicatorContainer: { flexDirection: 'row', justifyContent: 'center', marginTop: 12 },
+  indicator: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.textMuted, marginHorizontal: 4 },
+  activeIndicator: { backgroundColor: Colors.primary },
+
+  // Popover styles
+  popoverContainer: {
+    position: "absolute",
+    bottom: 200,
+    alignSelf: "center",
     backgroundColor: Colors.bgWhite,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    padding: 20,
-    maxHeight: '90%',
+    paddingVertical: 10,
+    borderRadius: 12,
+    width: 220,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 6,
   },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: Colors.textHeading,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.textHeading,
-    marginBottom: 8,
-  },
-  descriptionContainer: {
-    position: 'relative',
-    marginBottom: 16,
-  },
-  textArea: {
-    backgroundColor: Colors.inputBg,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    padding: 12,
-    paddingRight: 50, // Make room for the button
-    minHeight: 100,
-    fontSize: 16,
-  },
-  attachButton: {
-    position: 'absolute',
-    right: 12,
-    top: 12,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: Colors.bgWhite,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  submitButton: {
-    backgroundColor: Colors.primary,
-    padding: 16,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  submitButtonText: {
-    color: Colors.textLight,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  typeContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 16,
-  },
-  typeButton: {
-    backgroundColor: Colors.inputBg,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    padding: 8,
-  },
-  selectedTypeButton: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  typeButtonText: {
-    fontSize: 14,
-    color: Colors.textHeading,
-  },
-  selectedTypeButtonText: {
-    color: Colors.textLight,
-  },
-  carouselContainer: {
-    marginBottom: 40,
-  },
-  carouselTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.textHeading,
-    marginBottom: 24,
-  },
-  carousel: {
-    height: 150,
-  },
-  contactCard: {
-    backgroundColor: Colors.cardBg,
-    borderRadius: 8,
-    padding: 12,
-    width: width,
-  },
-  contactHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 14,
-  },
-  contactInfo: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  contactService: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.textHeading,
-  },
-  contactNumber: {
-    fontSize: 14,
-    color: Colors.primary,
-  },
-  contactNotes: {
-    fontSize: 14,
-    color: Colors.textMuted,
-    marginBottom: 8,
-  },
-  callButton: {
-    backgroundColor: Colors.primary,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 8,
-    borderRadius: 6,
-  },
-  callButtonText: {
-    color: Colors.textLight,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  indicatorContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 12,
-  },
-  indicator: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.textMuted,
-    marginHorizontal: 4,
-  },
-  activeIndicator: {
-    backgroundColor: Colors.primary,
-  },
-  attachedVideosContainer: {
-    marginBottom: 16,
-  },
-  videosList: {
-    gap: 8,
-  },
-  videoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.inputBg,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    padding: 12,
-  },
-  videoText: {
-    flex: 1,
-    fontSize: 14,
-    color: Colors.textHeading,
-    marginLeft: 8,
-  },
+  popoverItem: { paddingVertical: 12, paddingHorizontal: 16, flexDirection: "row", alignItems: "center", gap: 10 },
+  popoverText: { fontSize: 14, color: Colors.textHeading },
 });
