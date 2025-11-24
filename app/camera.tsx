@@ -52,6 +52,10 @@ export default function CameraScreen({ onClose, onSend }: { onClose: () => void;
     }).start(() => setFocusPoint(null));
   };
 
+  const toggleCameraFacing = () => {
+    setCameraFacing(prev => prev === "back" ? "front" : "back");
+  };
+
 
 
   const onCameraPress = (event: any) => {
@@ -133,7 +137,7 @@ export default function CameraScreen({ onClose, onSend }: { onClose: () => void;
             zoom={zoom}
           />
           <TouchableOpacity
-            style={StyleSheet.absoluteFill}
+            style={[StyleSheet.absoluteFill, { bottom: 150 }]}
             onPress={onCameraPress}
             activeOpacity={1}
           />
@@ -157,7 +161,7 @@ export default function CameraScreen({ onClose, onSend }: { onClose: () => void;
 
        <View style={styles.zoomContainer}>
         <Slider
-          style={{ width: 180 }}
+          style={{ width: 80 }}
           minimumValue={0}
           maximumValue={1}
           value={zoom}
@@ -168,6 +172,10 @@ export default function CameraScreen({ onClose, onSend }: { onClose: () => void;
         <View style={styles.controls}>
         <TouchableOpacity onPress={onClose} style={styles.iconButton}>
           <Ionicons name="close" size={32} color="#fff" />
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={toggleCameraFacing} style={styles.iconButton2}>
+          <Ionicons name="camera-reverse" size={32} color="#fff" />
         </TouchableOpacity>
 
         {/* Record Button */}
@@ -252,6 +260,7 @@ const styles = StyleSheet.create({
     borderRadius: 45,
     justifyContent: "center",
     alignItems: "center",
+    left: -45,
   },
 
   circularProgress: {
@@ -265,7 +274,7 @@ const styles = StyleSheet.create({
   zoomContainer: {
     position: "absolute",
     right: 20,
-    top: "40%",
+    top: "60%",
     backgroundColor: "rgba(0,0,0,0.5)",
     padding: 8,
     borderRadius: 20,
@@ -287,6 +296,13 @@ const styles = StyleSheet.create({
 
   iconButton: {
     padding: 6,
+    top: -670,
+    left: 320,
+  },
+  iconButton2: {
+    padding: 6,
+    top: -5,
+    left: 190,
   },
 
     recording: {
