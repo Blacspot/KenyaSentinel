@@ -52,6 +52,8 @@ export default function CameraScreen({ onClose, onSend }: { onClose: () => void;
     }).start(() => setFocusPoint(null));
   };
 
+
+
   const onCameraPress = (event: any) => {
     const x = event.nativeEvent.locationX;
     const y = event.nativeEvent.locationY;
@@ -84,26 +86,28 @@ export default function CameraScreen({ onClose, onSend }: { onClose: () => void;
     );
   }
  const startRecording = async () => {
-    if (!cameraRef.current) return;
+  if (!cameraRef.current) return;
 
-    try {
-      setIsRecording(true);
-      startTimer();
+  try {
+    setIsRecording(true);
+    startTimer();
 
-      const video = await cameraRef.current.recordAsync({
-        maxDuration: 180, // 3 minutes fallback
-        quality: "1080p",
-      });
+    const video = await cameraRef.current.recordAsync({
+      maxDuration: 180,
+      quality: "1080p",
+    });
 
-      stopTimer();
-      setRecordedUri(video.uri);
-      setIsRecording(false);
-    } catch (e) {
-      console.log(e);
-      setIsRecording(false);
-      stopTimer();
-    }
-  };
+    stopTimer();
+    setIsRecording(false);
+
+    setRecordedUri(video.uri);
+
+  } catch (e) {
+    console.log(e);
+    setIsRecording(false);
+    stopTimer();
+  }
+};
 
   const stopRecording = async () => {
     if (!cameraRef.current) return;
