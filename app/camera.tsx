@@ -3,6 +3,7 @@ import { View, TouchableOpacity, Text, StyleSheet, Animated, Easing, Image } fro
 import { CameraView, useCameraPermissions, useMicrophonePermissions } from "expo-camera";
 import Slider from "@react-native-assets/slider";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter, useLocalSearchParams } from "expo-router";
 
 const getInnerRecordButtonStyle = (recording: boolean) => ({
   width: recording ? 40 : 65,
@@ -11,8 +12,10 @@ const getInnerRecordButtonStyle = (recording: boolean) => ({
   borderRadius: recording ? 10 : 35,
 });
 
-export default function CameraScreen({ onClose, onSend }: { onClose: () => void; onSend: (uri: string) => void }) {
+export default function CameraScreen() {
   const cameraRef = useRef<any>(null);
+  const router = useRouter();
+  const params = useLocalSearchParams();
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [microphonePermission, requestMicrophonePermission] = useMicrophonePermissions();
   const [cameraFacing, setCameraFacing] = useState<"front" | "back">("back");
@@ -21,6 +24,11 @@ export default function CameraScreen({ onClose, onSend }: { onClose: () => void;
 
   const progressAnim = useRef(new Animated.Value(0)).current;
   const MAX_DURATION = 180000;
+
+  const [timer, setTimer] = useState(0);          // time in seconds
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+
 
   const [zoom, setZoom] = useState(0);
   const [focusPoint, setFocusPoint] = useState<{ x: number; y: number } | null>(null);
@@ -96,6 +104,13 @@ export default function CameraScreen({ onClose, onSend }: { onClose: () => void;
     setIsRecording(true);
     startTimer();
 
+    setTimer(0);
+
+     timerRef.current = setInterval(() => {
+     setTimer(prev => prev + 1);
+       }, 1000);
+ 
+
     const video = await cameraRef.current.recordAsync({
       maxDuration: 180,
       quality: "1080p",
@@ -106,24 +121,37 @@ export default function CameraScreen({ onClose, onSend }: { onClose: () => void;
 
     setRecordedUri(video.uri);
 
-  } catch (e) {
-    console.log(e);
-    setIsRecording(false);
-    stopTimer();
+ } catch (e) {
+  console.log(e);
+
+  stopTimer();
+  setIsRecording(false);
+
+  if (timerRef.current) {
+    clearInterval(timerRef.current);
+    timerRef.current = null;
   }
+}
 };
 
   const stopRecording = async () => {
-    if (!cameraRef.current) return;
+  if (!cameraRef.current) return;
 
-    try {
-      cameraRef.current.stopRecording();
-      setIsRecording(false);
-      stopTimer();
-    } catch (e) {
-      console.log(e);
+  try {
+    cameraRef.current.stopRecording();
+
+    // Stop both timers
+    stopTimer();
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
     }
-  };
+
+  } catch (e) {
+    console.log(e);
+  }
+};
+
 
   
   return(
@@ -136,11 +164,18 @@ export default function CameraScreen({ onClose, onSend }: { onClose: () => void;
             style={StyleSheet.absoluteFill}
             zoom={zoom}
           />
-          <TouchableOpacity
-            style={[StyleSheet.absoluteFill, { bottom: 150 }]}
-            onPress={onCameraPress}
-            activeOpacity={1}
-          />
+          <View
+             style={[StyleSheet.absoluteFill, { bottom: 150 }]}
+             pointerEvents="box-only"
+           >
+             <TouchableOpacity
+               style={StyleSheet.absoluteFill}
+               onPress={onCameraPress}
+               activeOpacity={1}
+             />
+           </View>
+           
+
         </>
       ) : (
         <Image source={{ uri: recordedUri }} style={styles.preview} />
@@ -159,6 +194,16 @@ export default function CameraScreen({ onClose, onSend }: { onClose: () => void;
         />
       )}
 
+      {isRecording && (
+          <View style={styles.timerContainer}>
+            <Text style={styles.timerText}>
+              {String(Math.floor(timer / 60)).padStart(2, '0')}:
+              {String(timer % 60).padStart(2, '0')}
+            </Text>
+          </View>
+        )}
+
+
        <View style={styles.zoomContainer}>
         <Slider
           style={{ width: 80 }}
@@ -170,13 +215,14 @@ export default function CameraScreen({ onClose, onSend }: { onClose: () => void;
       </View>
 
         <View style={styles.controls}>
-        <TouchableOpacity onPress={onClose} style={styles.iconButton}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.iconButton}>
           <Ionicons name="close" size={32} color="#fff" />
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={toggleCameraFacing} style={styles.iconButton2}>
-          <Ionicons name="camera-reverse" size={32} color="#fff" />
-        </TouchableOpacity>
+       <TouchableOpacity onPress={toggleCameraFacing} style={styles.iconButton2}>
+         <Ionicons name="camera-reverse" size={32} color="#fff" />
+       </TouchableOpacity>
+       
 
         {/* Record Button */}
         <TouchableOpacity
@@ -210,7 +256,7 @@ export default function CameraScreen({ onClose, onSend }: { onClose: () => void;
         {/* Send Button */}
         {recordedUri ? (
           <TouchableOpacity
-            onPress={() => onSend(recordedUri)}
+            onPress={() => router.push({ pathname: params.returnTo as any, params: { videoUri: recordedUri } })}
             style={styles.iconButton}
           >
             <Ionicons name="send" size={32} color="#4CAF50" />
@@ -260,7 +306,8 @@ const styles = StyleSheet.create({
     borderRadius: 45,
     justifyContent: "center",
     alignItems: "center",
-    left: -45,
+    left: 115,
+    bottom: 23,
   },
 
   circularProgress: {
@@ -295,15 +342,24 @@ const styles = StyleSheet.create({
   },
 
   iconButton: {
-    padding: 6,
-    top: -670,
-    left: 320,
-  },
-  iconButton2: {
-    padding: 6,
-    top: -5,
-    left: 190,
-  },
+  position: "absolute",
+  top: -670,
+  left: 340,
+  padding: 10,
+  backgroundColor: "rgba(0,0,0,0.3)",
+  borderRadius: 30,
+  zIndex: 999,
+},
+iconButton2: {
+  position: "absolute",
+  top: -5,
+  left: 320,
+  padding: 10,
+  backgroundColor: "rgba(0,0,0,0.3)",
+  borderRadius: 30,
+  zIndex: 999,
+},
+
 
     recording: {
         backgroundColor: "rgba(255, 0, 0, 0.2)",
@@ -319,4 +375,20 @@ const styles = StyleSheet.create({
     top: -5,
     left: 45,
   },
+  timerContainer: {
+  position: "absolute",
+  top: 60,
+  alignSelf: "center",
+  backgroundColor: "rgba(0,0,0,0.5)",
+  paddingVertical: 6,
+  paddingHorizontal: 12,
+  borderRadius: 10,
+},
+timerText: {
+  color: "#fff",
+  fontSize: 22,
+  fontWeight: "bold",
+  letterSpacing: 1,
+},
+
 });
