@@ -1,15 +1,65 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-import { Colors } from '@/constants/Colors';
 import IncidentCard from '@/components/IncidentCard';
-import { mockIncidents, trendingTopics } from '@/data/mockData';
+import { Colors } from '@/constants/Colors';
+import { Incident, mockIncidents } from '@/data/mockData';
+import { useEffect, useState } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function ExploreScreen() {
   const [activeTab, setActiveTab] = useState<'trending' | 'recent'>('trending');
+  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    fetchRealTrends();
+  }, []);
+
+  function calculatePriority(score: number): 'low' | 'medium' | 'high' | 'critical' {
+    if (score >= 15) return 'critical';
+    if (score >= 10) return 'high';
+    if (score >= 5) return 'medium';
+    return 'low';
+  }
+
+  function mapTrendToIncident(trend: any): Incident {
+    return {
+      id: trend.topic_key,
+      type: trend.category,
+      description: `${trend.count} reports of ${trend.category}`,
+      location: trend.location_bucket,
+      priority: calculatePriority(trend.score),
+      timestamp: trend.latest,
+      status: 'reported',
+      comments: 0
+    };
+  }
+
+  async function fetchRealTrends() {
+    try {
+      const response = await fetch(
+        'https://incidenttrends-algorithm.onrender.com/api/trends?top_n=20'
+      );
+      const data = await response.json();
+
+      if (data.success) {
+        setIncidents(data.trends.map(mapTrendToIncident));
+      }
+    } catch (error) {
+      console.error('Failed to fetch trends:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchRealTrends();
+    setRefreshing(false);
+  };
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Explore</Text>
@@ -40,13 +90,7 @@ export default function ExploreScreen() {
           {activeTab === 'trending' ? (
             <View>
               <Text style={styles.sectionTitle}>Trending Now</Text>
-              {trendingTopics.map((topic, index) => (
-                <View key={index} style={styles.trendingCard}>
-                  <Text style={styles.trendingTitle}>{topic.title}</Text>
-                  <Text style={styles.trendingLocation}>{topic.location}</Text>
-                  <Text style={styles.trendingReports}>{topic.reports} reports</Text>
-                </View>
-              ))}
+              {loading ? <Text>Loading trends...</Text> : incidents.map(incident => <IncidentCard key={incident.id} incident={incident} showComments />)}
             </View>
           ) : (
             <View>

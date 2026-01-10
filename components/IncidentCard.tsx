@@ -1,8 +1,7 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '@/constants/Colors';
 import { Incident } from '@/data/mockData';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface IncidentCardProps {
   incident: Incident;
@@ -61,7 +60,7 @@ export default function IncidentCard({ incident, showComments = false, onPress }
           <Text style={styles.location}>{incident.location}</Text>
         </View>
         <Text style={styles.timestamp}>
-          {new Date(incident.timestamp).toLocaleDateString('en-KE', {
+          {new Date(incident.timestamp).toLocaleDateString('en-US', {
             day: 'numeric',
             month: 'short',
             hour: '2-digit',
