@@ -42,37 +42,44 @@ export default function IncidentCard({ incident, showComments = false, onPress }
     <TouchableOpacity style={styles.container} onPress={onPress}>
       <View style={styles.header}>
         <View style={styles.typeContainer}>
-          <Text style={styles.type}>{incident.type}</Text>
+          <Text style={styles.type}>{String(incident.type || 'Unknown')}</Text>
           <View style={[styles.priorityBadge, { backgroundColor: getPriorityColor(incident.priority) }]}>
-            <Text style={styles.priorityText}>{incident.priority.toUpperCase()}</Text>
+            <Text style={styles.priorityText}>{String(incident.priority || 'low').toUpperCase()}</Text>
           </View>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: getStatusColor(incident.status) }]}>
-          <Text style={styles.statusText}>{incident.status}</Text>
+          <Text style={styles.statusText}>{String(incident.status || 'unknown')}</Text>
         </View>
       </View>
 
-      <Text style={styles.description}>{incident.description}</Text>
+      <Text style={styles.description}>{String(incident.description || 'No description')}</Text>
 
       <View style={styles.footer}>
         <View style={styles.locationContainer}>
           <MaterialCommunityIcons name="map-marker" size={16} color={Colors.textMuted} />
-          <Text style={styles.location}>{incident.location}</Text>
+          <Text style={styles.location}>{String(incident.location || 'Unknown location')}</Text>
         </View>
         <Text style={styles.timestamp}>
-          {new Date(incident.timestamp).toLocaleDateString('en-US', {
-            day: 'numeric',
-            month: 'short',
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
+          {(() => {
+            try {
+              return new Date(incident.timestamp).toLocaleDateString('en-US', {
+                day: 'numeric',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit',
+              });
+            } catch (error) {
+              console.error('Error formatting timestamp:', error);
+              return 'Invalid date';
+            }
+          })()}
         </Text>
       </View>
 
-      {showComments && incident.comments && incident.comments > 0 && (
+      {showComments && (incident.comments || 0) > 0 && (
         <View style={styles.commentsContainer}>
           <MaterialCommunityIcons name="comment" size={16} color={Colors.textMuted} />
-          <Text style={styles.commentsText}>{incident.comments} comments</Text>
+          <Text style={styles.commentsText}>{incident.comments || 0} comments</Text>
         </View>
       )}
     </TouchableOpacity>

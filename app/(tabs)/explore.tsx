@@ -4,6 +4,67 @@ import { Incident, mockIncidents } from '@/data/mockData';
 import { useEffect, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+// Kenyan cities and towns with approximate bounding boxes
+const kenyaCities = [
+  { name: 'Nairobi', minLat: -1.5, maxLat: -1.0, minLng: 36.5, maxLng: 37.0 },
+  { name: 'Mombasa', minLat: -4.1, maxLat: -4.0, minLng: 39.5, maxLng: 39.7 },
+  { name: 'Kisumu', minLat: -0.2, maxLat: 0.0, minLng: 34.5, maxLng: 35.0 },
+  { name: 'Nakuru', minLat: -0.5, maxLat: -0.2, minLng: 35.5, maxLng: 36.5 },
+  { name: 'Eldoret', minLat: 0.4, maxLat: 0.6, minLng: 35.2, maxLng: 35.4 },
+  { name: 'Thika', minLat: -1.1, maxLat: -0.9, minLng: 37.0, maxLng: 37.2 },
+  { name: 'Malindi', minLat: -3.3, maxLat: -3.1, minLng: 40.0, maxLng: 40.2 },
+  { name: 'Kitale', minLat: 0.9, maxLat: 1.1, minLng: 34.9, maxLng: 35.1 },
+  { name: 'Garissa', minLat: -0.5, maxLat: -0.3, minLng: 39.5, maxLng: 39.7 },
+  { name: 'Kakamega', minLat: 0.2, maxLat: 0.4, minLng: 34.6, maxLng: 34.8 },
+  { name: 'Meru', minLat: 0.0, maxLat: 0.2, minLng: 37.5, maxLng: 37.7 },
+  { name: 'Nyeri', minLat: -0.5, maxLat: -0.3, minLng: 36.8, maxLng: 37.0 },
+  { name: 'Embu', minLat: -0.6, maxLat: -0.4, minLng: 37.4, maxLng: 37.6 },
+  { name: 'Machakos', minLat: -1.6, maxLat: -1.4, minLng: 37.2, maxLng: 37.4 },
+  { name: 'Kericho', minLat: -0.4, maxLat: -0.2, minLng: 35.2, maxLng: 35.4 },
+  { name: 'Bomet', minLat: -0.8, maxLat: -0.6, minLng: 35.3, maxLng: 35.5 },
+  { name: 'Narok', minLat: -1.2, maxLat: -1.0, minLng: 35.8, maxLng: 36.0 },
+  { name: 'Kajiado', minLat: -2.0, maxLat: -1.8, minLng: 36.6, maxLng: 36.8 },
+  { name: 'Isiolo', minLat: 0.3, maxLat: 0.5, minLng: 38.4, maxLng: 38.6 },
+  { name: 'Marsabit', minLat: 2.3, maxLat: 2.5, minLng: 37.9, maxLng: 38.1 },
+  { name: 'Wajir', minLat: 1.7, maxLat: 1.9, minLng: 40.0, maxLng: 40.2 },
+  { name: 'Mandera', minLat: 3.9, maxLat: 4.1, minLng: 41.8, maxLng: 42.0 },
+  { name: 'Lamu', minLat: -2.3, maxLat: -2.1, minLng: 40.8, maxLng: 41.0 },
+  { name: 'Kilifi', minLat: -3.7, maxLat: -3.5, minLng: 39.8, maxLng: 40.0 },
+  { name: 'Kwale', minLat: -4.5, maxLat: -4.3, minLng: 39.4, maxLng: 39.6 },
+  { name: 'Taita Taveta', minLat: -3.5, maxLat: -3.3, minLng: 38.3, maxLng: 38.5 },
+  { name: 'Tana River', minLat: -1.5, maxLat: -1.3, minLng: 39.0, maxLng: 39.2 },
+  { name: 'Samburu', minLat: 1.2, maxLat: 1.4, minLng: 37.5, maxLng: 37.7 },
+  { name: 'Turkana', minLat: 3.0, maxLat: 3.2, minLng: 35.5, maxLng: 35.7 },
+  { name: 'West Pokot', minLat: 1.5, maxLat: 1.7, minLng: 35.0, maxLng: 35.2 },
+  { name: 'Bungoma', minLat: 0.5, maxLat: 0.7, minLng: 34.5, maxLng: 34.7 },
+  { name: 'Busia', minLat: 0.4, maxLat: 0.6, minLng: 34.0, maxLng: 34.2 },
+  { name: 'Siaya', minLat: -0.1, maxLat: 0.1, minLng: 34.2, maxLng: 34.4 },
+  { name: 'Homa Bay', minLat: -0.7, maxLat: -0.5, minLng: 34.4, maxLng: 34.6 },
+  { name: 'Migori', minLat: -1.1, maxLat: -0.9, minLng: 34.4, maxLng: 34.6 },
+  { name: 'Kisii', minLat: -0.8, maxLat: -0.6, minLng: 34.7, maxLng: 34.9 },
+  { name: 'Nyamira', minLat: -0.6, maxLat: -0.4, minLng: 34.9, maxLng: 35.1 },
+  { name: 'Nandi', minLat: 0.1, maxLat: 0.3, minLng: 35.1, maxLng: 35.3 },
+  { name: 'Uasin Gishu', minLat: 0.4, maxLat: 0.6, minLng: 35.3, maxLng: 35.5 },
+  { name: 'Trans Nzoia', minLat: 1.0, maxLat: 1.2, minLng: 34.9, maxLng: 35.1 },
+  { name: 'Vihiga', minLat: 0.0, maxLat: 0.2, minLng: 34.6, maxLng: 34.8 },
+  { name: 'Laikipia', minLat: 0.2, maxLat: 0.4, minLng: 36.5, maxLng: 36.7 },
+  { name: "Murang'a", minLat: -0.8, maxLat: -0.6, minLng: 37.1, maxLng: 37.3 },
+  { name: 'Kirinyaga', minLat: -0.6, maxLat: -0.4, minLng: 37.3, maxLng: 37.5 },
+  { name: 'Kiambu', minLat: -1.2, maxLat: -1.0, minLng: 36.7, maxLng: 36.9 },
+];
+
+function getCityFromCoords(lat: number, lng: number): string {
+  if (typeof lat !== 'number' || typeof lng !== 'number' || isNaN(lat) || isNaN(lng)) {
+    return 'Unknown Location';
+  }
+  for (const city of kenyaCities) {
+    if (lat >= city.minLat && lat <= city.maxLat && lng >= city.minLng && lng <= city.maxLng) {
+      return city.name;
+    }
+  }
+  return `${lat.toFixed(2)}, ${lng.toFixed(2)}`; // Fallback to coords
+}
+
 export default function ExploreScreen() {
   const [activeTab, setActiveTab] = useState<'trending' | 'recent'>('trending');
   const [incidents, setIncidents] = useState<Incident[]>([]);
@@ -22,11 +83,23 @@ export default function ExploreScreen() {
   }
 
   function mapTrendToIncident(trend: any): Incident {
+    const coords = trend.location_bucket.split('_');
+    let location = 'Unknown Location';
+    let locationCoords: { lat: number; lng: number } | undefined;
+    if (coords.length === 2) {
+      const lat = Number(coords[0]);
+      const lng = Number(coords[1]);
+      if (!isNaN(lat) && !isNaN(lng)) {
+        location = getCityFromCoords(lat, lng);
+        locationCoords = { lat, lng };
+      }
+    }
     return {
       id: trend.topic_key,
       type: trend.category,
       description: `${trend.count} reports of ${trend.category}`,
-      location: trend.location_bucket,
+      location,
+      locationCoords,
       priority: calculatePriority(trend.score),
       timestamp: trend.latest,
       status: 'reported',

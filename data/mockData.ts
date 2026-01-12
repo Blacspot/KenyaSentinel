@@ -5,6 +5,7 @@ export interface Incident {
   type: string;
   description: string;
   location: string;
+  locationCoords?: { lat: number; lng: number };
   priority: 'low' | 'medium' | 'high' | 'critical';
   timestamp: string;
   status: 'reported' | 'investigating' | 'resolved';
